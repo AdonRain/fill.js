@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>undefined</title>
+</head>
+<body>
+<div data-tpl>
+    <h1>{json.h1}</h1>
+    <h2>{json.h2.a}</h2>
+    <ul>
+        <li data-repeat="key*5">{json.li.key}</li>
+    </ul>
+</div>
+<script src="datatpl.js"></script>
+<script>
+render({
+    json:{
+        h1:'标题',
+        h2:{a:'次标题'},
+        li:[1,2,3,4,5]
+    }        
+});
+</script>
+</body>
+</html>
