@@ -28,60 +28,80 @@
         insert(this.oTpl,oTmp);
         remove(oTmp);
     }
+        
+    Template.prototype.render=function (Fod){
+        if(typeof Fod==='function'){
+            this.scope=new Fod();
+        }else if(typeof Fod==='object'){
+            this.scope=deepCopy(Fod);
+        }
 
-    Template.prototype.render=function (data,callback){
-        var oRpt=this.oTpl.querySelectorAll('[data-repeat]')[0];
-        var keyLen=oRpt.dataset.repeat.split('*');
-        var key=keyLen[0];
-        var len=parseInt(keyLen[1]);
+        analyze(this);    
+
+        this.callback&&this.done();
+
+        return this;
+    };
+
+    Template.prototype.done=function (callback){
+        this.callback=callback;
+        callback&&callback.call(this.scope);
+    };
+
+    function analyze(obj){
+        var aRpt=obj.oTpl.querySelectorAll('[data-repeat]');
+
+        for(var i=0;i<aRpt.length;i++){
+            obj.oRpt=aRpt[i];
+            obj.keyLen=obj.oRpt.dataset.repeat.split('*');
+            spread(obj);
+        }
+
+        compile(obj);
+    }
+
+    function spread(obj){
+        var oTmp=document.createElement('div');
+        var key=obj.keyLen[0];
+        var len=getLen.call(obj.scope,obj.keyLen[1]);
+
+        insert(oTmp,obj.oRpt);
+        oTmp.appendChild(obj.oRpt);
+
+        var line=oTmp.innerHTML;
+        var lines='';
+        var re=new RegExp('\\['+key+'\\]','g');
+        
+        for(var i=0;i<len;i++){
+            lines+=line.replace(re,'.'+i);
+        }
+
+        oTmp.innerHTML=lines;
+
+        var aElems=[];
+
+        for(var i=0;i<len;i++){
+            var obj=oTmp.children[i]
+            obj.removeAttribute('data-repeat');
+            aElems.push(obj);
+        }
+
+        for(var i=0;i<len;i++){
+            insert(aElems[i],oTmp);
+        }
+
+        remove(oTmp);
+    }
+
+    function compile(obj){
         var re=/{[^{}]+}/g;
+        var src=obj.oTpl.innerHTML;
+        var html=src.replace(re,function (s){
+            return getText(obj.scope,s.slice(1,-1));
+        });
 
-        analyze();
-        compile.call(this);
-
-        callback&&callback();
-
-        function analyze(){
-            var oTmp=document.createElement('div');
-
-            insert(oTmp,oRpt);
-            oTmp.appendChild(oRpt);
-
-            var line=oTmp.innerHTML;
-            var lines='';
-            
-            for(var i=0;i<len;i++){
-                lines+=line.replace(re,function (s){
-                    return s.replace(key,i);
-                });
-            }
-
-            oTmp.innerHTML=lines;
-
-            var aElems=[];
-
-            for(var i=0;i<len;i++){
-                var obj=oTmp.children[i]
-                obj.removeAttribute('data-repeat');
-                aElems.push(obj);
-            }
-
-            for(var i=0;i<len;i++){
-                insert(aElems[i],oTmp);
-            }
-
-            remove(oTmp);    
-        }
-
-        function compile(oTpl){
-            var src=this.oTpl.innerHTML;
-            var html=src.replace(re,function (s){
-                return getText(data,s.slice(1,-1));
-            });
-
-            this.oTpl.innerHTML=html;
-            delAttr(this.oTpl,['data-tpl','data-tag']);
-        }
+        obj.oTpl.innerHTML=html;
+        delAttr(obj.oTpl,['data-tpl','data-tag']);
     }
 
     function delAttr(obj,arr){
@@ -98,8 +118,24 @@
         obj.parentNode.removeChild(obj);
     }
 
-    function getText(data,name){
-        if(name.indexOf('.')!==-1){
+    function getLen(str){
+        var num=parseInt(str);
+
+        if(isNaN(num)){
+            return getText(this,str);
+        }else{
+            return num;
+        }
+    }
+
+    function getText(data,str){
+        var name=judge(str);
+        var reStr=/^'\w+'$/g;
+        var reObj=/\./g;
+
+        if(reStr.test(name)){
+            return name.slice(1,-1);
+        }else if(reObj.test(name)){
             var arr=name.split('.');
             var json=deepCopy(data);
             for(var i=0;i<arr.length;i++){
@@ -107,7 +143,22 @@
             }
             return json;
         }else{
-            return data.name;
+            return data[name];
+        }
+    }
+
+    function judge(name){
+        var reg=/\?|\:/g;
+        var arr=name.split(reg);
+
+        if(arr.length===1){
+            return arr[0];
+        }else{
+            if(arr[0]){
+                return arr[1];
+            }else{
+                return arr[2];
+            }
         }
     }
 
@@ -116,6 +167,9 @@
         for(var key in data){
             if(typeof data[key]==='object'){
                 json[key]=deepCopy(data[key]);
+                if(Object.prototype.toString.call(data[key])==='[object Array]'){
+                    json[key].length=data[key].length;
+                }
             }else{
                 json[key]=data[key];
             }
