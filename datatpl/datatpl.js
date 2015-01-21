@@ -1,3 +1,7 @@
+/*
+ * https://github.com/adonpro/datatpl
+ * */
+
 ;(function (context){
     ;(function (tpl){
         if(typeof define==='undefined'){
