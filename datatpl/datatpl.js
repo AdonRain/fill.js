@@ -133,10 +133,10 @@
     }
 
     function getText(data,str){
-        var name=judge(str);
-        var reStr=/^'\w+'$/g;
+        var name=judge(data,str);
+        var reStr=/^'[\w\s-]+'$/g;
         var reObj=/\./g;
-
+        
         if(reStr.test(name)){
             return name.slice(1,-1);
         }else if(reObj.test(name)){
@@ -151,17 +151,18 @@
         }
     }
 
-    function judge(name){
+    function judge(data,name){
         var reg=/\?|\:/g;
         var arr=name.split(reg);
-
+        
         if(arr.length===1){
             return arr[0];
         }else{
-            if(arr[0]){
-                return arr[1];
-            }else{
+            var flag=data[arr[0]];
+            if(!flag||flag==='0'){
                 return arr[2];
+            }else{
+                return arr[1];
             }
         }
     }
